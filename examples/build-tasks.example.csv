@@ -1,0 +1,2 @@
+repositoryName,pipelineId,pipelineName,buildId,buildNumber,branch,stageName,jobName,taskName,taskTypeName,startTime,finishTime,durationSeconds,result,state,errorCount,warningCount,workerName,logId
+repo-a,15,repo-a-ci,1001,20260604.1,refs/heads/develop,Build,Build Job,DotNet Restore,DotNetCoreCLI,2026-06-04T12:00:20.0000000Z,2026-06-04T12:01:20.0000000Z,60,succeeded,completed,0,0,agent-01,22

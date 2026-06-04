@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AdoPipelineMetrics.Application/AdoPipelineMetrics.Application.csproj" />
+    <Project Path="src/AdoPipelineMetrics.Cli/AdoPipelineMetrics.Cli.csproj" />
+    <Project Path="src/AdoPipelineMetrics.Domain/AdoPipelineMetrics.Domain.csproj" />
+    <Project Path="src/AdoPipelineMetrics.Infrastructure/AdoPipelineMetrics.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AdoPipelineMetrics.Tests/AdoPipelineMetrics.Tests.csproj" />
+  </Folder>
+</Solution>

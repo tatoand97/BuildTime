@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-06-04T12:00:00Z",
+  "repositories": [
+    {
+      "repositoryName": "repo-a",
+      "repositoryId": "00000000-0000-0000-0000-000000000000",
+      "pipelines": [
+        {
+          "definitionId": 15,
+          "definitionName": "repo-a-ci",
+          "builds": [
+            {
+              "buildId": 1001,
+              "buildNumber": "20260604.1",
+              "branch": "refs/heads/develop",
+              "status": "completed",
+              "result": "succeeded",
+              "queueTime": "2026-06-04T12:00:00Z",
+              "startTime": "2026-06-04T12:00:12Z",
+              "finishTime": "2026-06-04T12:07:12Z",
+              "queueDurationSeconds": 12,
+              "buildDurationSeconds": 420,
+              "queueToFinishDurationSeconds": 432,
+              "buildStageDurationSeconds": 390,
+              "tasks": [
+                {
+                  "stageName": "Build",
+                  "jobName": "Build Job",
+                  "taskName": "DotNet Restore",
+                  "taskTypeName": "DotNetCoreCLI",
+                  "startTime": "2026-06-04T12:00:20Z",
+                  "finishTime": "2026-06-04T12:01:20Z",
+                  "durationSeconds": 60,
+                  "result": "succeeded",
+                  "state": "completed",
+                  "errorCount": 0,
+                  "warningCount": 0,
+                  "workerName": "agent-01",
+                  "logId": 22
+                }
+              ],
+              "artifacts": [
+                {
+                  "name": "drop",
+                  "type": "Container",
+                  "sizeBytes": 131596288,
+                  "sizeMb": 125.5,
+                  "sizeStatus": "FromProperties",
+                  "downloadUrl": "https://dev.azure.com/my-org/_apis/resources/Containers/1/drop"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

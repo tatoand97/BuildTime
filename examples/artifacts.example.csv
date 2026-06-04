@@ -1,0 +1,2 @@
+repositoryName,pipelineId,pipelineName,buildId,buildNumber,artifactName,artifactType,sizeBytes,sizeMb,sizeStatus,downloadUrl
+repo-a,15,repo-a-ci,1001,20260604.1,drop,Container,131596288,125.5,FromProperties,https://dev.azure.com/my-org/_apis/resources/Containers/1/drop
