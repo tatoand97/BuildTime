@@ -102,6 +102,9 @@ public sealed record BuildReport(
     double? BuildDurationSeconds,
     double? QueueToFinishDurationSeconds,
     double? BuildStageDurationSeconds,
+    bool IsOutlier,
+    bool ExcludedFromMetrics,
+    string? OutlierReason,
     IReadOnlyList<TimelineTaskInfo> Tasks,
     IReadOnlyList<BuildArtifactInfo> Artifacts);
 
@@ -119,6 +122,10 @@ public sealed record BuildMetricsSummary(
     string RepositoryName,
     string PipelineName,
     int BuildsAnalyzed,
+    int BuildsFetched,
+    int BuildsIncludedInMetrics,
+    int BuildsExcludedAsOutliers,
+    double? OutlierThresholdMinutes,
     int SuccessfulBuilds,
     int FailedBuilds,
     double FailureRate,

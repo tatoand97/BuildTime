@@ -1,2 +1,2 @@
-repositoryName,pipelineName,buildsAnalyzed,successfulBuilds,failedBuilds,failureRate,averageBuildStageDurationSeconds,p50BuildStageDurationSeconds,p90BuildStageDurationSeconds,p99BuildStageDurationSeconds,averageQueueDurationSeconds,averageQueueToFinishSeconds,averageArtifactSizeMb,maxArtifactSizeMb,minArtifactSizeMb
-repo-a,repo-a-ci,1,1,0,0,390,390,390,390,12,432,125.5,125.5,125.5
+repositoryName,pipelineName,buildsAnalyzed,buildsFetched,buildsIncludedInMetrics,buildsExcludedAsOutliers,outlierThresholdMinutes,successfulBuilds,failedBuilds,failureRate,averageBuildStageDurationSeconds,p50BuildStageDurationSeconds,p90BuildStageDurationSeconds,p99BuildStageDurationSeconds,averageQueueDurationSeconds,averageQueueToFinishSeconds,averageArtifactSizeMb,maxArtifactSizeMb,minArtifactSizeMb
+repo-a,repo-a-ci,1,1,1,0,15,1,0,0,390,390,390,390,12,432,125.5,125.5,125.5

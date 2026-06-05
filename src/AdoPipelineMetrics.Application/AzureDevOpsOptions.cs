@@ -15,6 +15,7 @@ public sealed class AzureDevOpsOptions
     public List<string> StageNameAliases { get; set; } = [];
     public bool DownloadArtifactsForSize { get; set; }
     public string OutputPath { get; set; } = "./output";
+    public OutlierFilterOptions OutlierFilter { get; set; } = new();
 
     public IReadOnlySet<string> EffectiveStageNames()
     {
@@ -24,4 +25,13 @@ public sealed class AzureDevOpsOptions
             .Select(static value => value.Trim())
             .ToHashSet(StringComparer.Ordinal);
     }
+}
+
+public sealed class OutlierFilterOptions
+{
+    public bool Enabled { get; set; } = true;
+    public double MaxBuildStageDurationMinutes { get; set; } = 15;
+    public bool ExcludeFromMetrics { get; set; } = true;
+    public bool KeepInRawJson { get; set; } = true;
+    public string Reason { get; set; } = "Build stage duration exceeded configured threshold";
 }

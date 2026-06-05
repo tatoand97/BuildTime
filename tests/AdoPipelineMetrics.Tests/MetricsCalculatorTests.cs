@@ -39,10 +39,10 @@ public sealed class MetricsCalculatorTests
         var result = calculator.CalculateBuildSummaries([
             new RepositoryReport("repo-a", "repo-id", [
                 new PipelineReport(1, "pipeline-a", [
-                    new BuildReport(1, "1", "refs/heads/develop", "completed", "succeeded", null, null, null, 10, 20, 30, 40, [], [
+                    new BuildReport(1, "1", "refs/heads/develop", "completed", "succeeded", null, null, null, 10, 20, 30, 40, false, false, null, [], [
                         new BuildArtifactInfo("drop", "Container", 1048576, 1, "FromProperties", null, null, new Dictionary<string, string?>())
                     ]),
-                    new BuildReport(2, "2", "refs/heads/develop", "completed", "failed", null, null, null, 20, 30, 50, 60, [], [
+                    new BuildReport(2, "2", "refs/heads/develop", "completed", "failed", null, null, null, 20, 30, 50, 60, false, false, null, [], [
                         new BuildArtifactInfo("drop", "Container", 2097152, 2, "FromProperties", null, null, new Dictionary<string, string?>())
                     ])
                 ])
@@ -51,11 +51,39 @@ public sealed class MetricsCalculatorTests
 
         var summary = Assert.Single(result);
         Assert.Equal(2, summary.BuildsAnalyzed);
+        Assert.Equal(2, summary.BuildsFetched);
+        Assert.Equal(2, summary.BuildsIncludedInMetrics);
+        Assert.Equal(0, summary.BuildsExcludedAsOutliers);
         Assert.Equal(1, summary.SuccessfulBuilds);
         Assert.Equal(1, summary.FailedBuilds);
         Assert.Equal(0.5, summary.FailureRate);
         Assert.Equal(1.5, summary.AverageArtifactSizeMb);
         Assert.Equal(2, summary.MaxArtifactSizeMb);
         Assert.Equal(1, summary.MinArtifactSizeMb);
+    }
+
+    [Fact]
+    public void CalculateBuildSummaries_ExcludesOutliersFromMetrics()
+    {
+        var calculator = new MetricsCalculator();
+        var result = calculator.CalculateBuildSummaries([
+            new RepositoryReport("repo-a", "repo-id", [
+                new PipelineReport(1, "pipeline-a", [
+                    new BuildReport(1, "1", "refs/heads/develop", "completed", "succeeded", null, null, null, 10, 20, 30, 300, false, false, null, [], []),
+                    new BuildReport(2, "2", "refs/heads/develop", "completed", "failed", null, null, null, 20, 30, 50, 1200, true, true, "Build stage duration exceeded 15 minutes", [], [])
+                ])
+            ])
+        ]);
+
+        var summary = Assert.Single(result);
+        Assert.Equal(1, summary.BuildsAnalyzed);
+        Assert.Equal(2, summary.BuildsFetched);
+        Assert.Equal(1, summary.BuildsIncludedInMetrics);
+        Assert.Equal(1, summary.BuildsExcludedAsOutliers);
+        Assert.Equal(1, summary.SuccessfulBuilds);
+        Assert.Equal(0, summary.FailedBuilds);
+        Assert.Equal(0, summary.FailureRate);
+        Assert.Equal(300, summary.AverageBuildStageDurationSeconds);
+        Assert.Equal(30, summary.AverageQueueToFinishSeconds);
     }
 }

@@ -22,6 +22,9 @@
               "buildDurationSeconds": 420,
               "queueToFinishDurationSeconds": 432,
               "buildStageDurationSeconds": 390,
+              "isOutlier": false,
+              "excludedFromMetrics": false,
+              "outlierReason": null,
               "tasks": [
                 {
                   "stageName": "Build",

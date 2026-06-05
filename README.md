@@ -26,6 +26,13 @@ Copie `appsettings.example.json` como `appsettings.json` y ajuste:
     "TopBuilds": 60,
     "StageName": "Build",
     "StageNameAliases": ["Build Project"],
+    "OutlierFilter": {
+      "Enabled": true,
+      "MaxBuildStageDurationMinutes": 15,
+      "ExcludeFromMetrics": true,
+      "KeepInRawJson": true,
+      "Reason": "Build stage duration exceeded configured threshold"
+    },
     "DownloadArtifactsForSize": false,
     "OutputPath": "./output"
   }
@@ -61,6 +68,11 @@ dotnet run --project src/AdoPipelineMetrics.Cli -- --repos repo-a,repo-b --branc
 - Para varias branches se ejecuta una consulta Builds List por cada `branchName`, porque Azure DevOps no acepta arrays en ese parametro.
 - Los builds duplicados entre consultas se deduplican por `build.id`.
 - Si no se encuentra stage Build, pipelines, builds o tamanio de artefacto, se registra warning y la ejecucion continua.
+- `TopBuilds` indica cuantas ejecuciones se consultan desde Azure DevOps; no representa necesariamente cuantas ejecuciones quedan incluidas en las metricas finales.
+- Si `OutlierFilter.Enabled=true`, la duracion usada para detectar outliers se calcula con `startTime` y `finishTime` del timeline record cuyo `type == "Stage"` y cuyo `name` coincide con `StageName` o sus alias. No se usa `finishTime - queueTime` del build completo.
+- Si la duracion del stage Build supera `MaxBuildStageDurationMinutes`, la ejecucion queda marcada con `isOutlier=true`, `excludedFromMetrics=true` y `outlierReason="Build stage duration exceeded {threshold} minutes"`.
+- Si el stage Build no existe o no tiene `startTime`/`finishTime`, la ejecucion queda marcada con `excludedFromMetrics=true` y una razon especifica.
+- Cuando `KeepInRawJson=true`, las ejecuciones excluidas se conservan en `pipeline-metrics.json`, pero no participan en promedios, percentiles, promedios por task ni metricas queue-to-finish.
 
 ## Tamanio de artefactos
 
@@ -106,6 +118,9 @@ En `OutputPath` se generan:
               "buildDurationSeconds": 420,
               "queueToFinishDurationSeconds": 432,
               "buildStageDurationSeconds": 390,
+              "isOutlier": false,
+              "excludedFromMetrics": false,
+              "outlierReason": null,
               "tasks": [],
               "artifacts": []
             }
@@ -122,6 +137,6 @@ En `OutputPath` se generan:
 `builds-summary.csv`
 
 ```csv
-repositoryName,pipelineId,pipelineName,buildId,buildNumber,branch,status,result,queueTime,startTime,finishTime,queueDurationSeconds,buildDurationSeconds,queueToFinishDurationSeconds,buildStageDurationSeconds,artifactTotalSizeMb
-repo-a,15,repo-a-ci,1001,20260604.1,refs/heads/develop,completed,succeeded,2026-06-04T12:00:00.0000000Z,2026-06-04T12:00:12.0000000Z,2026-06-04T12:07:12.0000000Z,12,420,432,390,125.5
+repositoryName,pipelineId,pipelineName,buildId,buildNumber,branch,status,result,queueTime,startTime,finishTime,queueDurationSeconds,buildDurationSeconds,queueToFinishDurationSeconds,buildStageDurationSeconds,isOutlier,outlierReason,excludedFromMetrics,artifactTotalSizeMb
+repo-a,15,repo-a-ci,1001,20260604.1,refs/heads/develop,completed,succeeded,2026-06-04T12:00:00.0000000Z,2026-06-04T12:00:12.0000000Z,2026-06-04T12:07:12.0000000Z,12,420,432,390,false,,false,125.5
 ```

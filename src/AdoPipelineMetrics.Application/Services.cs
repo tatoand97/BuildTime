@@ -192,7 +192,7 @@ public sealed class ArtifactService(IAzureDevOpsClient client, IOptions<AzureDev
     }
 }
 
-public sealed class MetricsCalculator : IMetricsCalculator
+public sealed class MetricsCalculator(IOptions<AzureDevOpsOptions>? options = null) : IMetricsCalculator
 {
     public IReadOnlyList<BuildMetricsSummary> CalculateBuildSummaries(IReadOnlyList<RepositoryReport> repositories)
     {
@@ -209,6 +209,7 @@ public sealed class MetricsCalculator : IMetricsCalculator
             foreach (var pipeline in repository.Pipelines)
             {
                 var groups = pipeline.Builds
+                    .Where(static build => !build.ExcludedFromMetrics)
                     .SelectMany(static build => build.Tasks)
                     .GroupBy(static task => task.TaskName, StringComparer.OrdinalIgnoreCase);
 
@@ -250,16 +251,22 @@ public sealed class MetricsCalculator : IMetricsCalculator
 
     private BuildMetricsSummary Calculate(string repositoryName, PipelineReport pipeline)
     {
-        var builds = pipeline.Builds;
+        var builds = pipeline.Builds.Where(static build => !build.ExcludedFromMetrics).ToArray();
+        var buildsFetched = pipeline.Builds.Count;
+        var buildsExcludedAsOutliers = pipeline.Builds.Count(static build => build.IsOutlier && build.ExcludedFromMetrics);
         var artifactSizes = builds.SelectMany(static build => build.Artifacts).Select(static artifact => artifact.SizeMb).Where(static value => value.HasValue).Select(static value => value!.Value).ToArray();
         var failedBuilds = builds.Count(static build => string.Equals(build.Result, "failed", StringComparison.OrdinalIgnoreCase));
         return new BuildMetricsSummary(
             repositoryName,
             pipeline.DefinitionName,
-            builds.Count,
+            builds.Length,
+            buildsFetched,
+            builds.Length,
+            buildsExcludedAsOutliers,
+            options?.Value.OutlierFilter.Enabled == true ? options.Value.OutlierFilter.MaxBuildStageDurationMinutes : null,
             builds.Count(static build => string.Equals(build.Result, "succeeded", StringComparison.OrdinalIgnoreCase)),
             failedBuilds,
-            builds.Count == 0 ? 0 : (double)failedBuilds / builds.Count,
+            builds.Length == 0 ? 0 : (double)failedBuilds / builds.Length,
             Average(builds.Select(static build => build.BuildStageDurationSeconds)),
             Percentile(builds.Select(static build => build.BuildStageDurationSeconds), 50),
             Percentile(builds.Select(static build => build.BuildStageDurationSeconds), 90),

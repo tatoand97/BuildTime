@@ -31,8 +31,9 @@ public sealed class PipelineMetricsRunner(
                 {
                     var timeline = await timelineService.GetBuildStageAsync(build.Id, cancellationToken);
                     var artifacts = await artifactService.GetArtifactsAsync(build.Id, cancellationToken);
+                    var outlierStatus = EvaluateOutlier(build, timeline.Stage);
 
-                    buildReports.Add(new BuildReport(
+                    var report = new BuildReport(
                         build.Id,
                         build.BuildNumber,
                         build.SourceBranch,
@@ -45,8 +46,16 @@ public sealed class PipelineMetricsRunner(
                         build.BuildDurationSeconds,
                         build.QueueToFinishDurationSeconds,
                         timeline.Stage?.DurationSeconds,
+                        outlierStatus.IsOutlier,
+                        outlierStatus.ExcludedFromMetrics,
+                        outlierStatus.Reason,
                         timeline.Tasks,
-                        artifacts));
+                        artifacts);
+
+                    if (!report.ExcludedFromMetrics || options.Value.OutlierFilter.KeepInRawJson)
+                    {
+                        buildReports.Add(report);
+                    }
                 }
 
                 pipelineReports.Add(new PipelineReport(definition.Id, definition.Name, buildReports));
@@ -69,6 +78,44 @@ public sealed class PipelineMetricsRunner(
         return result;
     }
 
+    private BuildOutlierStatus EvaluateOutlier(BuildRunInfo build, TimelineStageInfo? stage)
+    {
+        var filter = options.Value.OutlierFilter;
+        if (stage is null)
+        {
+            const string reason = "Build stage was not found in timeline";
+            logger.LogWarning("Build {BuildId} excluded from metrics. Reason={Reason}", build.Id, reason);
+            return new BuildOutlierStatus(false, true, reason);
+        }
+
+        if (stage.StartTime is null || stage.FinishTime is null || stage.DurationSeconds is null)
+        {
+            const string reason = "Build stage does not have startTime and finishTime";
+            logger.LogWarning("Build {BuildId} excluded from metrics. Reason={Reason}", build.Id, reason);
+            return new BuildOutlierStatus(false, true, reason);
+        }
+
+        if (!filter.Enabled)
+        {
+            return new BuildOutlierStatus(false, false, null);
+        }
+
+        var durationMinutes = stage.DurationSeconds.Value / 60d;
+        if (durationMinutes > filter.MaxBuildStageDurationMinutes)
+        {
+            var reason = $"Build stage duration exceeded {filter.MaxBuildStageDurationMinutes:0.####} minutes";
+            logger.LogWarning(
+                "Build {BuildId} excluded from metrics as outlier. BuildStageDurationMinutes={BuildStageDurationMinutes}, ThresholdMinutes={ThresholdMinutes}. Reason={Reason}",
+                build.Id,
+                durationMinutes,
+                filter.MaxBuildStageDurationMinutes,
+                filter.Reason);
+            return new BuildOutlierStatus(true, true, reason);
+        }
+
+        return new BuildOutlierStatus(false, false, null);
+    }
+
     private void ValidateOptions()
     {
         var current = options.Value;
@@ -86,5 +133,12 @@ public sealed class PipelineMetricsRunner(
         {
             throw new InvalidOperationException("AzureDevOps:TopBuilds must be greater than zero.");
         }
+
+        if (current.OutlierFilter.MaxBuildStageDurationMinutes <= 0)
+        {
+            throw new InvalidOperationException("AzureDevOps:OutlierFilter:MaxBuildStageDurationMinutes must be greater than zero.");
+        }
     }
+
+    private sealed record BuildOutlierStatus(bool IsOutlier, bool ExcludedFromMetrics, string? Reason);
 }

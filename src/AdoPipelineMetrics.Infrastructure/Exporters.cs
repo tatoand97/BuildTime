@@ -36,7 +36,7 @@ public sealed class CsvExporter : ICsvExporter
     {
         var rows = new List<string[]>
         {
-            new[] { "repositoryName", "pipelineId", "pipelineName", "buildId", "buildNumber", "branch", "status", "result", "queueTime", "startTime", "finishTime", "queueDurationSeconds", "buildDurationSeconds", "queueToFinishDurationSeconds", "buildStageDurationSeconds", "artifactTotalSizeMb" }
+            new[] { "repositoryName", "pipelineId", "pipelineName", "buildId", "buildNumber", "branch", "status", "result", "queueTime", "startTime", "finishTime", "queueDurationSeconds", "buildDurationSeconds", "queueToFinishDurationSeconds", "buildStageDurationSeconds", "isOutlier", "outlierReason", "excludedFromMetrics", "artifactTotalSizeMb" }
         };
 
         foreach (var item in EnumerateBuilds(result))
@@ -57,6 +57,9 @@ public sealed class CsvExporter : ICsvExporter
                 Format(item.Build.BuildDurationSeconds),
                 Format(item.Build.QueueToFinishDurationSeconds),
                 Format(item.Build.BuildStageDurationSeconds),
+                Format(item.Build.IsOutlier),
+                item.Build.OutlierReason ?? string.Empty,
+                Format(item.Build.ExcludedFromMetrics),
                 Format(SumArtifactSizeMb(item.Build.Artifacts))
             ]);
         }
@@ -136,7 +139,7 @@ public sealed class CsvExporter : ICsvExporter
     {
         var rows = new List<string[]>
         {
-            new[] { "repositoryName", "pipelineName", "buildsAnalyzed", "successfulBuilds", "failedBuilds", "failureRate", "averageBuildStageDurationSeconds", "p50BuildStageDurationSeconds", "p90BuildStageDurationSeconds", "p99BuildStageDurationSeconds", "averageQueueDurationSeconds", "averageQueueToFinishSeconds", "averageArtifactSizeMb", "maxArtifactSizeMb", "minArtifactSizeMb" }
+            new[] { "repositoryName", "pipelineName", "buildsAnalyzed", "buildsFetched", "buildsIncludedInMetrics", "buildsExcludedAsOutliers", "outlierThresholdMinutes", "successfulBuilds", "failedBuilds", "failureRate", "averageBuildStageDurationSeconds", "p50BuildStageDurationSeconds", "p90BuildStageDurationSeconds", "p99BuildStageDurationSeconds", "averageQueueDurationSeconds", "averageQueueToFinishSeconds", "averageArtifactSizeMb", "maxArtifactSizeMb", "minArtifactSizeMb" }
         };
 
         foreach (var metric in result.Metrics)
@@ -145,6 +148,10 @@ public sealed class CsvExporter : ICsvExporter
                 metric.RepositoryName,
                 metric.PipelineName,
                 Format(metric.BuildsAnalyzed),
+                Format(metric.BuildsFetched),
+                Format(metric.BuildsIncludedInMetrics),
+                Format(metric.BuildsExcludedAsOutliers),
+                Format(metric.OutlierThresholdMinutes),
                 Format(metric.SuccessfulBuilds),
                 Format(metric.FailedBuilds),
                 Format(metric.FailureRate),
@@ -215,5 +222,10 @@ public sealed class CsvExporter : ICsvExporter
     private static string Format(int value)
     {
         return value.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private static string Format(bool value)
+    {
+        return value.ToString().ToLowerInvariant();
     }
 }
