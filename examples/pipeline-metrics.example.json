@@ -21,8 +21,13 @@
               "queueDurationSeconds": 12,
               "buildDurationSeconds": 420,
               "queueToFinishDurationSeconds": 432,
+              "buildStageStartTime": "2026-06-04T12:00:15Z",
+              "buildStageFinishTime": "2026-06-04T12:06:45Z",
+              "artifactReadyTime": "2026-06-04T12:06:40Z",
               "buildStageDurationSeconds": 390,
+              "queueToArtifactReadySeconds": 400,
               "isOutlier": false,
+              "isQueueOutlier": false,
               "excludedFromMetrics": false,
               "outlierReason": null,
               "tasks": [

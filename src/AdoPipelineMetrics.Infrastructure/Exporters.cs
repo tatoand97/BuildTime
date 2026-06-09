@@ -36,7 +36,7 @@ public sealed class CsvExporter : ICsvExporter
     {
         var rows = new List<string[]>
         {
-            new[] { "repositoryName", "pipelineId", "pipelineName", "buildId", "buildNumber", "branch", "status", "result", "queueTime", "startTime", "finishTime", "queueDurationSeconds", "buildDurationSeconds", "queueToFinishDurationSeconds", "buildStageDurationSeconds", "isOutlier", "outlierReason", "excludedFromMetrics", "artifactTotalSizeMb" }
+            new[] { "repositoryName", "pipelineId", "pipelineName", "buildId", "buildNumber", "branch", "status", "result", "queueTime", "startTime", "finishTime", "queueDurationSeconds", "buildDurationSeconds", "queueToFinishDurationSeconds", "buildStageStartTime", "buildStageFinishTime", "artifactReadyTime", "buildStageDurationSeconds", "queueToArtifactReadySeconds", "isOutlier", "isQueueOutlier", "outlierReason", "excludedFromMetrics", "artifactTotalSizeMb" }
         };
 
         foreach (var item in EnumerateBuilds(result))
@@ -56,8 +56,13 @@ public sealed class CsvExporter : ICsvExporter
                 Format(item.Build.QueueDurationSeconds),
                 Format(item.Build.BuildDurationSeconds),
                 Format(item.Build.QueueToFinishDurationSeconds),
+                Format(item.Build.BuildStageStartTime),
+                Format(item.Build.BuildStageFinishTime),
+                Format(item.Build.ArtifactReadyTime),
                 Format(item.Build.BuildStageDurationSeconds),
+                Format(item.Build.QueueToArtifactReadySeconds),
                 Format(item.Build.IsOutlier),
+                Format(item.Build.IsQueueOutlier),
                 item.Build.OutlierReason ?? string.Empty,
                 Format(item.Build.ExcludedFromMetrics),
                 Format(SumArtifactSizeMb(item.Build.Artifacts))
@@ -139,7 +144,7 @@ public sealed class CsvExporter : ICsvExporter
     {
         var rows = new List<string[]>
         {
-            new[] { "repositoryName", "pipelineName", "buildsAnalyzed", "buildsFetched", "buildsIncludedInMetrics", "buildsExcludedAsOutliers", "outlierThresholdMinutes", "successfulBuilds", "failedBuilds", "failureRate", "averageBuildStageDurationSeconds", "p50BuildStageDurationSeconds", "p90BuildStageDurationSeconds", "p99BuildStageDurationSeconds", "averageQueueDurationSeconds", "averageQueueToFinishSeconds", "averageArtifactSizeMb", "maxArtifactSizeMb", "minArtifactSizeMb" }
+            new[] { "repositoryName", "pipelineName", "buildsAnalyzed", "buildsFetched", "buildsIncludedInMetrics", "buildsSucceededIncludedInDurationMetrics", "buildsFailedForFailureRate", "buildsCanceled", "buildsExcludedMissingStage", "buildsExcludedAsOutliers", "buildsExcludedByResult", "outlierThresholdMinutes", "successfulBuilds", "failedBuilds", "failureRate", "averageBuildStageDurationSeconds", "p50BuildStageDurationSeconds", "p90BuildStageDurationSeconds", "p99BuildStageDurationSeconds", "averageQueueDurationSeconds", "averageQueueToFinishSeconds", "averageQueueToArtifactReadySeconds", "averageArtifactSizeMb", "maxArtifactSizeMb", "minArtifactSizeMb" }
         };
 
         foreach (var metric in result.Metrics)
@@ -150,7 +155,12 @@ public sealed class CsvExporter : ICsvExporter
                 Format(metric.BuildsAnalyzed),
                 Format(metric.BuildsFetched),
                 Format(metric.BuildsIncludedInMetrics),
+                Format(metric.BuildsSucceededIncludedInDurationMetrics),
+                Format(metric.BuildsFailedForFailureRate),
+                Format(metric.BuildsCanceled),
+                Format(metric.BuildsExcludedMissingStage),
                 Format(metric.BuildsExcludedAsOutliers),
+                Format(metric.BuildsExcludedByResult),
                 Format(metric.OutlierThresholdMinutes),
                 Format(metric.SuccessfulBuilds),
                 Format(metric.FailedBuilds),
@@ -161,6 +171,7 @@ public sealed class CsvExporter : ICsvExporter
                 Format(metric.P99BuildStageDurationSeconds),
                 Format(metric.AverageQueueDurationSeconds),
                 Format(metric.AverageQueueToFinishSeconds),
+                Format(metric.AverageQueueToArtifactReadySeconds),
                 Format(metric.AverageArtifactSizeMb),
                 Format(metric.MaxArtifactSizeMb),
                 Format(metric.MinArtifactSizeMb)
@@ -196,6 +207,7 @@ public sealed class CsvExporter : ICsvExporter
 
     private static string Escape(string value)
     {
+        value = value.ReplaceLineEndings(" ");
         if (!value.Contains(',') && !value.Contains('"') && !value.Contains('\n') && !value.Contains('\r'))
         {
             return value;

@@ -251,28 +251,47 @@ public sealed class MetricsCalculator(IOptions<AzureDevOpsOptions>? options = nu
 
     private BuildMetricsSummary Calculate(string repositoryName, PipelineReport pipeline)
     {
-        var builds = pipeline.Builds.Where(static build => !build.ExcludedFromMetrics).ToArray();
+        var policy = options?.Value.MetricsInclusionPolicy ?? new MetricsInclusionPolicyOptions();
+        var durationResults = policy.EffectiveDurationMetricsResults();
+        var failureRateResults = policy.EffectiveFailureRateResults();
+        var durationBuilds = pipeline.Builds
+            .Where(build => !build.ExcludedFromMetrics && durationResults.Contains(build.Result ?? string.Empty))
+            .ToArray();
+        var failureRateBuilds = pipeline.Builds
+            .Where(build => failureRateResults.Contains(build.Result ?? string.Empty))
+            .Where(build => !policy.ExcludeCanceledFromMetrics || !string.Equals(build.Result, "canceled", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
         var buildsFetched = pipeline.Builds.Count;
         var buildsExcludedAsOutliers = pipeline.Builds.Count(static build => build.IsOutlier && build.ExcludedFromMetrics);
-        var artifactSizes = builds.SelectMany(static build => build.Artifacts).Select(static artifact => artifact.SizeMb).Where(static value => value.HasValue).Select(static value => value!.Value).ToArray();
-        var failedBuilds = builds.Count(static build => string.Equals(build.Result, "failed", StringComparison.OrdinalIgnoreCase));
+        var buildsExcludedMissingStage = pipeline.Builds.Count(static build => build.ExcludedFromMetrics && build.BuildStageDurationSeconds is null);
+        var buildsExcludedByResult = pipeline.Builds.Count(build => !durationResults.Contains(build.Result ?? string.Empty));
+        var artifactSizes = durationBuilds.SelectMany(static build => build.Artifacts).Select(static artifact => artifact.SizeMb).Where(static value => value.HasValue).Select(static value => value!.Value).ToArray();
+        var successfulBuilds = failureRateBuilds.Count(static build => string.Equals(build.Result, "succeeded", StringComparison.OrdinalIgnoreCase));
+        var failedBuilds = failureRateBuilds.Count(static build => string.Equals(build.Result, "failed", StringComparison.OrdinalIgnoreCase));
+        var failureRateDenominator = successfulBuilds + failedBuilds;
         return new BuildMetricsSummary(
             repositoryName,
             pipeline.DefinitionName,
-            builds.Length,
+            durationBuilds.Length,
             buildsFetched,
-            builds.Length,
-            buildsExcludedAsOutliers,
-            options?.Value.OutlierFilter.Enabled == true ? options.Value.OutlierFilter.MaxBuildStageDurationMinutes : null,
-            builds.Count(static build => string.Equals(build.Result, "succeeded", StringComparison.OrdinalIgnoreCase)),
+            durationBuilds.Length,
+            durationBuilds.Count(static build => string.Equals(build.Result, "succeeded", StringComparison.OrdinalIgnoreCase)),
             failedBuilds,
-            builds.Length == 0 ? 0 : (double)failedBuilds / builds.Length,
-            Average(builds.Select(static build => build.BuildStageDurationSeconds)),
-            Percentile(builds.Select(static build => build.BuildStageDurationSeconds), 50),
-            Percentile(builds.Select(static build => build.BuildStageDurationSeconds), 90),
-            Percentile(builds.Select(static build => build.BuildStageDurationSeconds), 99),
-            Average(builds.Select(static build => build.QueueDurationSeconds)),
-            Average(builds.Select(static build => build.QueueToFinishDurationSeconds)),
+            pipeline.Builds.Count(static build => string.Equals(build.Result, "canceled", StringComparison.OrdinalIgnoreCase)),
+            buildsExcludedMissingStage,
+            buildsExcludedAsOutliers,
+            buildsExcludedByResult,
+            options?.Value.OutlierFilter.Enabled == true ? options.Value.OutlierFilter.MaxBuildStageDurationMinutes : null,
+            successfulBuilds,
+            failedBuilds,
+            failureRateDenominator == 0 ? 0 : (double)failedBuilds / failureRateDenominator,
+            Average(durationBuilds.Select(static build => build.BuildStageDurationSeconds)),
+            Percentile(durationBuilds.Select(static build => build.BuildStageDurationSeconds), 50),
+            Percentile(durationBuilds.Select(static build => build.BuildStageDurationSeconds), 90),
+            Percentile(durationBuilds.Select(static build => build.BuildStageDurationSeconds), 99),
+            Average(durationBuilds.Select(static build => build.QueueDurationSeconds)),
+            Average(durationBuilds.Select(static build => build.QueueToFinishDurationSeconds)),
+            Average(durationBuilds.Select(static build => build.QueueToArtifactReadySeconds)),
             artifactSizes.Length == 0 ? null : artifactSizes.Average(),
             artifactSizes.Length == 0 ? null : artifactSizes.Max(),
             artifactSizes.Length == 0 ? null : artifactSizes.Min());
